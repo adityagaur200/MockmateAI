@@ -6,7 +6,7 @@ from app.utils.constants import ALLOWED_RESUME_TYPES as allowed_types
 
 router = APIRouter()
 
-# 🔹 Start Interview (Resume + JD)
+#Start Interview (Resume + JD)
 @router.post("/start")
 async def start(
     resume: UploadFile = File(...),
@@ -31,7 +31,7 @@ async def start(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 🔹 Submit Answer (Text-based)
+#Submit Answer (Text-based)
 @router.post("/{interview_id}/answer")
 async def answer(
     interview_id: str,
@@ -45,7 +45,7 @@ async def answer(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 🔹 Health Check
+#Health Check
 @router.get("/")
 async def test():
     return {"message": "Interview API working 🚀"}

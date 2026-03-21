@@ -4,6 +4,7 @@ python-dotenv
 motor
 pymongo
 google-generativeai
+google-genai 
 faster-whisper
 celery
 redis

@@ -10,7 +10,6 @@ MAX_QUESTIONS = 10
 MIN_QUESTIONS = 8
 
 
-# 🔹 Start Interview
 async def start_interview(resume_text, job_description):
 
     first_question = await generate_first_question(resume_text, job_description)
@@ -34,10 +33,8 @@ async def start_interview(resume_text, job_description):
     }
 
 
-# 🔹 Submit Answer (🔥 SMART VERSION)
 async def submit_answer(interview_id, answer_text):
 
-    # 🔹 Get interview
     cached = redis_client.get(f"interview:{interview_id}")
 
     if cached:
@@ -48,11 +45,11 @@ async def submit_answer(interview_id, answer_text):
     current_question = interview["current_question"]
     history = interview["history"]
 
-    # 🔹 Evaluate answer
+    
     evaluation = evaluate_answer(current_question, answer_text)
     score = evaluation["score"]
 
-    # 🔹 Save history
+    
     history_entry = {
         "question": current_question,
         "answer": answer_text,
@@ -64,7 +61,6 @@ async def submit_answer(interview_id, answer_text):
 
     total_questions = len(history)
 
-    # 🔥 INTERVIEW END CONDITION
     if total_questions >= MAX_QUESTIONS or (total_questions >= MIN_QUESTIONS and score >= 8):
         interview["status"] = "COMPLETED"
         interview["current_question"] = None
@@ -82,10 +78,9 @@ async def submit_answer(interview_id, answer_text):
             "total_questions": total_questions
         }
 
-    # 🔥 DECIDE NEXT QUESTION TYPE
-
+    
     if score < 5:
-        # 👉 Follow-up question
+        #Follow-up question
         next_question = await generate_next_question(
             interview["resume_text"],
             interview["job_description"],
@@ -93,7 +88,7 @@ async def submit_answer(interview_id, answer_text):
         )
 
     elif score >= 8:
-        # 👉 Move to new topic
+        # Move to new topic
         next_question = await generate_next_question(
             interview["resume_text"],
             interview["job_description"],
@@ -101,14 +96,14 @@ async def submit_answer(interview_id, answer_text):
         )
 
     else:
-        # 👉 Normal progression
+        #Normal progression
         next_question = await generate_next_question(
             interview["resume_text"],
             interview["job_description"],
             history
         )
 
-    # 🔹 Update interview
+    #Update interview
     interview["current_question"] = next_question
 
     await interview_collection.update_one(

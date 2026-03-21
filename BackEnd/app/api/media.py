@@ -4,7 +4,7 @@ from app.service.media_service import save_file
 router = APIRouter()
 
 
-# 🔹 Upload Audio/Video File
+#Upload Audio/Video File
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:

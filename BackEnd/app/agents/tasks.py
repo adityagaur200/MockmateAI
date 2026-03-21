@@ -11,7 +11,7 @@ from app.db.mongodb import redis_client
 @celery_app.task
 def process_audio_answer(interview_id, file_path):
     
-    # 🔹 Get interview
+    #Get interview
     interview = interview_collection.find_one({"_id": ObjectId(interview_id)})
 
     if not interview:
@@ -19,15 +19,15 @@ def process_audio_answer(interview_id, file_path):
 
     current_question = interview["current_question"]
 
-    # 🔹 Step 1: Transcribe audio
+    #Step 1: Transcribe audio
     transcript = transcribe_audio(file_path)
 
-    # 🔹 Step 2: Evaluate answer
+    #Step 2: Evaluate answer
     evaluation = evaluate_answer(current_question, transcript)
 
     score = evaluation["score"]
 
-    # 🔹 Save history
+    #Save history
     history_entry = {
         "question": current_question,
         "answer": transcript,
@@ -37,7 +37,7 @@ def process_audio_answer(interview_id, file_path):
 
     interview["history"].append(history_entry)
 
-    # 🔹 Step 3: Generate next question
+    #Step 3: Generate next question
     next_question = generate_next_question(
         interview["resume_text"],
         interview["job_description"],
@@ -46,13 +46,13 @@ def process_audio_answer(interview_id, file_path):
 
     interview["current_question"] = next_question
 
-    # 🔹 Update DB
+    #Update DB
     interview_collection.update_one(
         {"_id": ObjectId(interview_id)},
         {"$set": interview}
     )
 
-    # 🔹 Update Redis cache
+    #Update Redis cache
     redis_client.set(
         f"interview:{interview_id}",
         json.dumps(interview),

@@ -1,7 +1,7 @@
 from bson import ObjectId
 from fastapi import HTTPException
 
-# 🔹 Convert MongoDB document to JSON serializable
+# Convert MongoDB document to JSON serializable
 def serialize_mongo(document):
     if not document:
         return None
@@ -10,12 +10,12 @@ def serialize_mongo(document):
     return document
 
 
-# 🔹 Serialize list of documents
+#  Serialize list of documents
 def serialize_list(documents):
     return [serialize_mongo(doc) for doc in documents]
 
 
-# 🔹 Safe JSON conversion for Redis
+#  Safe JSON conversion for Redis
 def safe_json(data):
     import json
     try:

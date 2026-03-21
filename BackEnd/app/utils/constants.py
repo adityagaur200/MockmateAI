@@ -1,17 +1,17 @@
-# 🔹 Interview Limits
+# Interview Limits
 MAX_QUESTIONS = 10
 MIN_QUESTIONS = 8
 
-# 🔹 Redis Cache Expiry (seconds)
-REDIS_EXPIRY = 3600  # 1 hour
+# Redis Cache Expiry 
+REDIS_EXPIRY = 3600  
 
-# 🔹 Interview Status
+# Interview Status
 STATUS_IN_PROGRESS = "IN_PROGRESS"
 STATUS_COMPLETED = "COMPLETED"
 
-# 🔹 Allowed File Types
+# Allowed File Types
 ALLOWED_RESUME_TYPES = ["application/pdf"]
 ALLOWED_MEDIA_TYPES = ["audio/mpeg", "audio/wav", "video/mp4"]
 
-# 🔹 Upload Folder
+# Upload Folder
 UPLOAD_DIR = "uploads"

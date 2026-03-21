@@ -4,11 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ✅ create client properly
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-
-# 🔹 First Question
 async def generate_first_question(resume, jd):
     prompt = f"""
     You are an AI interviewer.
@@ -30,7 +27,6 @@ async def generate_first_question(resume, jd):
     return response.text.strip()
 
 
-# 🔹 Next Question
 async def generate_next_question(resume, jd, history):
     prompt = f"""
     You are a smart AI interviewer.

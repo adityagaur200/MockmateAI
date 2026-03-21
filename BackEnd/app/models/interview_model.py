@@ -27,6 +27,6 @@ class Interview(BaseModel):
 
     current_question: Optional[str] = None
 
-    status: str = "IN_PROGRESS"  # IN_PROGRESS / COMPLETED
+    status: str = "IN_PROGRESS"  
 
     created_at: datetime = Field(default_factory=datetime.now())
