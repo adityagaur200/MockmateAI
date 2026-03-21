@@ -1,11 +1,11 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.config import MONGO_URI, DB_NAME
+from app.config import MONGO_URI
 import redis
 from app.config import REDIS_URL
 
 client = AsyncIOMotorClient(MONGO_URI)
 
-db = client[DB_NAME]
+db = client["MockMateAI"]
 
 interview_collection = db["interviews"]
 user_collection = db["users"]
