@@ -10,11 +10,12 @@ MAX_QUESTIONS = 10
 MIN_QUESTIONS = 8
 
 
-async def start_interview(resume_text, job_description):
+async def start_interview(resume_text, job_description,job_name):
 
     first_question = await generate_first_question(resume_text, job_description)
 
     interview = {
+        "job_name": job_name,
         "resume_text": resume_text,
         "job_description": job_description,
         "history": [],
@@ -29,6 +30,7 @@ async def start_interview(resume_text, job_description):
 
     return {
         "interview_id": interview_id,
+        "job_name": job_name,
         "question": first_question
     }
 

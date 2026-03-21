@@ -10,7 +10,8 @@ router = APIRouter()
 @router.post("/start")
 async def start(
     resume: UploadFile = File(...),
-    job_description: str = Form(...)
+    job_description: str = Form(...),
+    job_name: str = Form(...)
 ):
     try:
         # Validate file type
@@ -23,7 +24,7 @@ async def start(
         resume_text = await extract_text_from_pdf(resume)
 
         # Start interview
-        result = await start_interview(resume_text, job_description)
+        result = await start_interview(resume_text, job_description,job_name)
 
         return result
 

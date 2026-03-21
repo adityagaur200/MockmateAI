@@ -20,6 +20,7 @@ class QuestionAnswer(BaseModel):
 
 class Interview(BaseModel):
     user_id: str
+    job_name: str
     resume_text: str
     job_description: str
 

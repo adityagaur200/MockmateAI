@@ -4,12 +4,14 @@ from typing import Optional, List
 
 #Start Interview Request
 class StartInterviewRequest(BaseModel):
+    job_name: str
     job_description: str
 
 
 #Start Interview Response
 class StartInterviewResponse(BaseModel):
     interview_id: str
+    job_name: str
     first_question: str
 
 
@@ -28,6 +30,7 @@ class SubmitAnswerResponse(BaseModel):
 # Interview Report
 class InterviewReportResponse(BaseModel):
     interview_id: str
+    job_name: str
     total_questions: int
     average_score: float
     summary: str
