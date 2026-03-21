@@ -9,6 +9,8 @@ import HowItWorksPage from "./pages/HowItWorks.tsx";
 import DashboardPage from "./pages/Dashboard.tsx";
 import PerformancePage from "./pages/Performance.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import Resume from "./components/Resume.tsx";
+
 
 const queryClient = new QueryClient();
 
@@ -20,6 +22,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/resume" element={<Resume />} />
           <Route path="/interview" element={<Interview />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />

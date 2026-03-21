@@ -3,7 +3,9 @@ import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Plus, Clock, CheckCircle, BarChart3 } from "lucide-react";
+import { Plus, Clock, CheckCircle, BarChart3,X } from "lucide-react";
+import { useState } from "react";
+import Resume from "@/components/Resume";
 
 const pastInterviews = [
   { id: 1, role: "Frontend Developer", company: "TechCorp", date: "Mar 10, 2026", score: 8, status: "Completed" },
@@ -12,6 +14,7 @@ const pastInterviews = [
 ];
 
 const DashboardPage = () => {
+  const[newInterview,setnewInterview]=useState(false);
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -27,10 +30,32 @@ const DashboardPage = () => {
               <h1 className="text-3xl font-bold tracking-tight mb-1">Dashboard</h1>
               <p className="text-muted-foreground">Manage your mock interviews and track progress.</p>
             </div>
-            <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300 gap-2">
+            <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300 gap-2" onClick={()=>setnewInterview(true)}>
               <Plus className="h-4 w-4" />
               New Interview
             </Button>
+          {newInterview && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
+    
+    {/* Wrapper with 15px spacing on both sides */}
+    <div className="relative">
+      
+      {/* Close Button */}
+      <button
+        onClick={() => setnewInterview(false)}
+        className="absolute -top-5 -right-7 z-10 p-2 rounded-full bg-white shadow-md hover:bg-gray-100 text-gray-700 transition-all duration-200"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {/* Modal Content */}
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-[50vw] max-h-[93vh]">
+        <Resume />
+      </div>
+
+    </div>
+  </div>
+)}
           </motion.div>
 
           {/* Stats */}
