@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from app.schemas.interview_schema import StartInterviewResponse
 from app.service.interview_service import start_interview, submit_answer
 from app.utils.file_parser import extract_text_from_pdf
 from app.utils.helpers import validate_file_type, validate_file_size
@@ -7,7 +8,7 @@ from app.utils.constants import ALLOWED_RESUME_TYPES as allowed_types
 router = APIRouter()
 
 #Start Interview (Resume + JD)
-@router.post("/start")
+@router.post("/start", response_model=StartInterviewResponse)
 async def start(
     resume: UploadFile = File(...),
     job_description: str = Form(...),

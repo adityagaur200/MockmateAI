@@ -6,6 +6,7 @@ from app.service.evaluation_service import evaluate_answer
 from app.service.ai_service import generate_next_question
 from app.db.mongodb import interview_collection
 from app.db.mongodb import redis_client
+from app.utils.helpers import serialize_mongo
 
 
 @celery_app.task
@@ -13,6 +14,7 @@ def process_audio_answer(interview_id, file_path):
     
     #Get interview
     interview = interview_collection.find_one({"_id": ObjectId(interview_id)})
+    interview = serialize_mongo(interview)
 
     if not interview:
         return
@@ -55,7 +57,7 @@ def process_audio_answer(interview_id, file_path):
     #Update Redis cache
     redis_client.set(
         f"interview:{interview_id}",
-        json.dumps(interview),
+        json.dumps(serialize_mongo(interview)),
         ex=3600
     )
 

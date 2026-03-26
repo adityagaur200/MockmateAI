@@ -20,7 +20,7 @@ async def generate_first_question(resume, jd):
     """
 
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-2.5-flash",
         contents=prompt
     )
 
@@ -50,7 +50,7 @@ async def generate_next_question(resume, jd, history):
     """
 
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-2.5-flash",
         contents=prompt
     )
 
