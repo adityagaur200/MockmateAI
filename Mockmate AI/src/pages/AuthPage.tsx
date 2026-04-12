@@ -223,26 +223,6 @@ export default function AuthPage() {
               "Create Account"
             )}
           </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
-            <div className="flex-1 h-px bg-gray-200"></div>
-            OR
-            <div className="flex-1 h-px bg-gray-200"></div>
-          </div>
-
-          {/* Google (future) */}
-          <button
-            type="button"
-            className="w-full border py-2 rounded-lg flex justify-center gap-2 hover:bg-gray-50"
-          >
-            <img
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              className="w-5 h-5"
-              alt="google"
-            />
-            Continue with Google
-          </button>
         </form>
       </div>
     </div>
