@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Brain, Menu, X } from "lucide-react";
 
@@ -7,21 +7,36 @@ const navLinks = [
   { label: "Features", to: "/#features" },
   { label: "How It Works", to: "/how-it-works" },
   { label: "Dashboard", to: "/dashboard" },
-  { label: "Performance", to: "/performance" },
 ];
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(Boolean(token));
+
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const isActive = (to: string) => location.pathname === to;
+
+  const handleAuthButton = () => {
+    if (isLoggedIn) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      setIsLoggedIn(false);
+      navigate("/");
+      return;
+    }
+    navigate("/auth");
+  };
 
   return (
     <nav
@@ -59,8 +74,12 @@ const Navbar = () => {
               </Link>
             )
           )}
-          <Button size="sm" className="bg-gradient-primary hover:shadow-glow transition-shadow">
-            Sign In
+          <Button
+            size="sm"
+            className="bg-gradient-primary hover:shadow-glow transition-shadow"
+            onClick={handleAuthButton}
+          >
+            {isLoggedIn ? "Sign Out" : "Sign In"}
           </Button>
         </div>
 
@@ -93,7 +112,13 @@ const Navbar = () => {
                 </Link>
               )
             )}
-            <Button size="sm" className="bg-gradient-primary w-fit">Sign In</Button>
+            <Button
+              size="sm"
+              className="bg-gradient-primary w-fit"
+              onClick={handleAuthButton}
+            >
+              {isLoggedIn ? "Sign Out" : "Sign In"}
+            </Button>
           </div>
         </div>
       )}

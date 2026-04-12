@@ -7,9 +7,10 @@ import Interview from "@/pages/Interview";
 import Index from "./pages/Index.tsx";
 import HowItWorksPage from "./pages/HowItWorks.tsx";
 import DashboardPage from "./pages/Dashboard.tsx";
-import PerformancePage from "./pages/Performance.tsx";
+import AnalysisDetail from "./pages/AnalysisDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Resume from "./components/Resume.tsx";
+import AuthPage from "./pages/AuthPage.tsx";
 
 
 const queryClient = new QueryClient();
@@ -22,11 +23,12 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<AuthPage />} />
           <Route path="/resume" element={<Resume />} />
           <Route path="/interview" element={<Interview />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/performance" element={<PerformancePage />} />
+          <Route path="/analysis/:interviewId" element={<AnalysisDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

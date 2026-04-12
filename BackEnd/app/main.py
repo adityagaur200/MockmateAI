@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import interview, media
+from app.api import interview, media, auth
+from app.auth.utils import get_current_user
+
 
 app = FastAPI(title="AI Mock Interview Backend")
 
@@ -14,8 +16,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Routes
+# ✅ ROUTES
+app.include_router(auth.router)                     
 app.include_router(interview.router, prefix="/interview")
 app.include_router(media.router, prefix="/media")
 

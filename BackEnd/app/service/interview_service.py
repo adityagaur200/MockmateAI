@@ -1,3 +1,4 @@
+from datetime import datetime
 from http.client import HTTPException
 import json
 from bson import ObjectId
@@ -7,21 +8,23 @@ from app.service.ai_service import generate_first_question, generate_next_questi
 from app.service.evaluation_service import evaluate_answer
 from app.utils.helpers import serialize_mongo
 
-MAX_QUESTIONS = 10
-MIN_QUESTIONS = 8
 
 
-async def start_interview(resume_text, job_description,job_name):
+MAX_QUESTIONS = 2
+
+async def start_interview(user_id, resume_text, job_description,job_name):
 
     first_question = await generate_first_question(resume_text, job_description)
 
     interview = {
         "job_name": job_name,
+        "user_id": user_id,
         "resume_text": resume_text,
         "job_description": job_description,
         "history": [],
         "current_question": first_question,
-        "status": "IN_PROGRESS"
+        "status": "IN_PROGRESS",
+        "created_at": datetime.utcnow()
     }
     
     try:
@@ -48,6 +51,7 @@ async def start_interview(resume_text, job_description,job_name):
 
 async def submit_answer(interview_id, answer_text):
 
+    # 🔹 Fetch from Redis first
     cached = redis_client.get(f"interview:{interview_id}")
 
     if cached:
@@ -56,12 +60,34 @@ async def submit_answer(interview_id, answer_text):
         interview = await interview_collection.find_one({"_id": ObjectId(interview_id)})
         interview = serialize_mongo(interview)
 
-    current_question = interview["current_question"]
-    history = interview["history"]
+    # 🔹 Early exit if already completed (idempotent)
+    if interview.get("status") == "COMPLETED":
+        history = interview.get("history", [])
+        total_questions = len(history)
+        final_score = sum(h["score"] for h in history) / total_questions if total_questions else 0
 
+        return {
+            "status": "COMPLETED",
+            "message": "Interview Completed 🎉",
+            "final_score": final_score,
+            "total_questions": total_questions
+        }
+
+    # 🔹 Validate current question
+    current_question = interview.get("current_question")
+    if not current_question:
+        return {
+            "status": "ERROR",
+            "message": "No active question found. Interview might be completed."
+        }
+
+    history = interview.get("history", [])
+
+    # 🔹 Evaluate answer (make async if needed)
     evaluation = evaluate_answer(current_question, answer_text)
     score = evaluation["score"]
 
+    # 🔹 Append history
     history_entry = {
         "question": current_question,
         "answer": answer_text,
@@ -72,8 +98,10 @@ async def submit_answer(interview_id, answer_text):
     history.append(history_entry)
     total_questions = len(history)
 
-    # ✅ Interview completion
-    if total_questions >= MAX_QUESTIONS or (total_questions >= MIN_QUESTIONS and score >= 8):
+    # 🔹 Interview completion check
+    if total_questions >= MAX_QUESTIONS:
+
+        final_score = sum(h["score"] for h in history) / total_questions if total_questions else 0
 
         await interview_collection.update_one(
             {"_id": ObjectId(interview_id)},
@@ -86,25 +114,38 @@ async def submit_answer(interview_id, answer_text):
             }
         )
 
+        interview["history"] = history
+        interview["status"] = "COMPLETED"
+        interview["current_question"] = None
+
+        redis_client.set(
+            f"interview:{interview_id}",
+            json.dumps(interview),
+            ex=3600
+        )
+
         return {
+            "status": "COMPLETED",
             "message": "Interview Completed 🎉",
-            "final_score": sum([h["score"] for h in history]) / total_questions,
+            "final_score": final_score,
             "total_questions": total_questions
         }
 
-    # ✅ Generate next question
+    # 🔹 Generate next question (adaptive logic)
     if score < 5:
         next_question = await generate_next_question(
             interview["resume_text"],
             interview["job_description"],
-            history + [{"instruction": "Ask a follow-up question on the same topic"}]
+            history + [{"type": "instruction", "content": "Ask a follow-up question on the same topic"}]
         )
+
     elif score >= 8:
         next_question = await generate_next_question(
             interview["resume_text"],
             interview["job_description"],
-            history + [{"instruction": "Move to a new topic or increase difficulty"}]
+            history + [{"type": "instruction", "content": "Move to a new topic or increase difficulty"}]
         )
+
     else:
         next_question = await generate_next_question(
             interview["resume_text"],
@@ -112,7 +153,7 @@ async def submit_answer(interview_id, answer_text):
             history
         )
 
-    # ✅ Update ONLY required fields
+    # 🔹 Update DB
     await interview_collection.update_one(
         {"_id": ObjectId(interview_id)},
         {
@@ -123,7 +164,8 @@ async def submit_answer(interview_id, answer_text):
         }
     )
 
-    # ✅ Update Redis safely
+    # 🔹 Update Redis (IMPORTANT: include history)
+    interview["history"] = history
     interview["current_question"] = next_question
 
     redis_client.set(
@@ -132,9 +174,49 @@ async def submit_answer(interview_id, answer_text):
         ex=3600
     )
 
+    # 🔹 Final response
     return {
         "next_question": next_question,
         "score": score,
         "feedback": evaluation["feedback"],
-        "progress": f"{total_questions}/10"
+        "progress": f"{total_questions}/{MAX_QUESTIONS}"
+    }
+
+async def get_current_question(interview_id):
+
+    # 🔹 Try Redis first (FAST)
+    cached = redis_client.get(f"interview:{interview_id}")
+
+    if cached:
+        interview = json.loads(cached)
+    else:
+        # 🔹 Fallback to MongoDB
+        interview = await interview_collection.find_one({"_id": ObjectId(interview_id)})
+
+        if not interview:
+            return {"error": "Interview not found"}
+
+        interview = serialize_mongo(interview)
+
+        # 🔹 Cache it
+        redis_client.set(
+            f"interview:{interview_id}",
+            json.dumps(interview),
+            ex=3600
+        )
+
+    #Stop if completed
+    if interview["status"] == "COMPLETED":
+        return {
+            "status": "COMPLETED",
+            "message": "Interview Completed 🎉",
+            "final_score": sum([h["score"] for h in interview.get("history", [])]) / len(interview.get("history", [])) if interview.get("history") else 0,
+            "total_questions": len(interview.get("history", []))
+        }
+    
+    # ✅ Return only required fields
+    return {
+        "current_question": interview.get("current_question"),
+        "status": interview.get("status"),
+        "progress": f"{len(interview.get('history', []))}/10"
     }

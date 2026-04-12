@@ -12,6 +12,7 @@ from app.utils.ObjectId_Vallidator import PyObjectId
 class StartInterviewRequest(BaseModel):
     job_name: str
     job_description: str
+    create_at: datetime
 
 
 #Start Interview Response
@@ -19,6 +20,7 @@ class StartInterviewResponse(BaseModel):
     interview_id: str
     job_name: str
     first_question: str
+    created_at: datetime
 
 
 # Submit Answer Request
@@ -52,6 +54,9 @@ class InterviewResponse(BaseModel):
     current_question: Optional[str] = None
     status: str
     created_at: datetime
+    final_score: Optional[float] = None
+    final_feedback: Optional[str] = None
+    ended_at: Optional[datetime] = None
 
     class Config:
         allow_population_by_field_name = True

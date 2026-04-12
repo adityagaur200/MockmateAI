@@ -7,6 +7,8 @@ celery_app = Celery(
     backend=REDIS_URL
 )
 
+celery_app.conf.imports = ("app.agents.tasks",)
+
 celery_app.conf.task_routes = {
-    "app.workers.tasks.*": {"queue": "default"}
+    "app.agents.tasks.*": {"queue": "celery"}
 }

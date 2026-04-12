@@ -36,6 +36,48 @@ const Resume = () => {
     }
   };
 
+  const handleSubmit = async () => {
+  if (!resumeFile || !jobTitle) return;
+
+  try {
+    const formData = new FormData();
+    formData.append("resume", resumeFile);
+    formData.append("job_description", jobDescription);
+    formData.append("job_name", jobTitle);
+
+    
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please log in to continue.");
+      navigate("/Auth");
+      return;
+    }
+    const response = await fetch("http://localhost:8000/interview/start", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("API failed");
+    }
+
+    const data = await response.json();
+
+    // ✅ BOTH: perform action + redirect
+    navigate("/interview", {
+      state: {
+        interviewData: data
+      }
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+  }
+};
+
   return (
      <div className="rounded-2xl border bg-card p-8 shadow-card space-y-6">
             {/* Resume Upload */}
@@ -122,7 +164,7 @@ const Resume = () => {
             <Button
               size="lg"
               className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 h-12 text-base"
-              onClick={()=>navigate("/interview")}
+              onClick={handleSubmit}
               disabled={!resumeFile || !jobTitle}
             >
               Generate Interview Questions

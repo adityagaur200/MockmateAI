@@ -1,65 +1,240 @@
 import { Mic, Camera, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+import { set } from "date-fns";
 
 const MockInterviewPreview = () => {
-  return (
-    <div className="rounded-2xl border bg-card shadow-card-hover overflow-hidden">
-      {/* Top tabs */}
-      <div className="flex items-center gap-2 px-6 pt-5 pb-3 flex-wrap">
-        {["Question #1", "Question #2", "Question #3", "Question #4", "Question #5"].map(
-          (q, i) => (
-            <span
-              key={q}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                i === 0
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground"
-              }`}
-            >
-              {q}
-            </span>
-          )
+const interviewId = localStorage.getItem("InterviewId");
+console.log("Interview ID from localStorage:", interviewId);
+
+const [question, setQuestion] = useState("");
+const [loading, setLoading] = useState(true);
+
+const [isRecording, setIsRecording] = useState(false);
+const [mediaRecorder, setMediaRecorder] = useState(null);
+const [recordedBlob, setRecordedBlob] = useState(null);
+
+const videoRef = useRef(null);
+const streamRef = useRef(null);
+
+// ✅ FETCH QUESTION
+const fetchQuestion = async () => {
+try {
+const res = await fetch(
+`http://localhost:8000/interview/${interviewId}/question`
+);
+
+  const data = await res.json();
+  console.log("API Response:", data);
+
+  if(data.status === "COMPLETED") {
+    setQuestion("Interview Completed 🎉");
+    return;
+  }
+
+  if (data.current_question) {
+    setQuestion(data.current_question);
+  }
+
+} catch (err) {
+  console.error("Fetch error:", err);
+  setQuestion("Error loading question ❌");
+} finally {
+  setLoading(false);
+}
+};
+
+// ✅ INITIAL LOAD
+useEffect(() => {
+if (!interviewId) return;
+fetchQuestion();
+}, [interviewId]);
+
+// 🎥 Start camera
+const startMedia = async () => {
+const stream = await navigator.mediaDevices.getUserMedia({
+video: true,
+audio: true,
+});
+
+
+streamRef.current = stream;
+
+if (videoRef.current) {
+  videoRef.current.srcObject = stream;
+}
+
+return stream;
+
+};
+
+// 🎤 Start Recording
+const startRecording = async () => {
+const stream = await startMedia();
+
+
+const recorder = new MediaRecorder(stream);
+setMediaRecorder(recorder);
+
+const chunks = [];
+
+recorder.ondataavailable = (e) => {
+  chunks.push(e.data);
+};
+
+recorder.onstop = () => {
+  const blob = new Blob(chunks, { type: "video/webm" });
+  setRecordedBlob(blob);
+
+  streamRef.current.getTracks().forEach((track) => track.stop());
+};
+
+recorder.start();
+setIsRecording(true);
+
+
+};
+
+// 🛑 Stop Recording
+const stopRecording = () => {
+if (mediaRecorder) {
+mediaRecorder.stop();
+setIsRecording(false);
+}
+};
+
+// 🔁 POLLING (FIXED)
+const pollForNextQuestion = (oldQuestion) => {
+  const interval = setInterval(async () => {
+    const res = await fetch(
+      `http://localhost:8000/interview/${interviewId}/question`
+    );
+
+    const data = await res.json();
+    console.log("Polling:", data);
+
+    // 🔥 STOP if interview completed
+    if (data.status === "COMPLETED") {
+      clearInterval(interval);
+
+      alert("Interview Completed 🎉");
+
+      // 👉 redirect to result page
+      window.location.href = "/analysis"; // or use navigate()
+      
+
+      return;
+    }
+
+    // ✅ Update only if new question
+    if (
+      data.current_question &&
+      data.current_question !== oldQuestion
+    ) {
+      setQuestion(data.current_question);
+      clearInterval(interval);
+    }
+
+  }, 3000);
+
+  setTimeout(() => clearInterval(interval), 30000); // safety stop after 1 min
+};
+
+// 🚀 Submit Answer
+const submitAnswer = async () => {
+try {
+if (!recordedBlob) {
+alert("Please record an answer first 🎤");
+return;
+}
+
+
+  const oldQuestion = question; // store current
+
+  const formData = new FormData();
+  formData.append("file", recordedBlob, "answer.webm");
+
+  await fetch(
+    `http://localhost:8000/interview/${interviewId}/answer`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  // ⏳ show processing
+  setQuestion("Processing your answer... ⏳");
+
+  // 🔁 start polling
+  pollForNextQuestion(oldQuestion);
+
+  setRecordedBlob(null);
+
+} catch (err) {
+  console.error("Submit error:", err);
+}
+
+
+};
+
+return ( <div className="rounded-2xl border bg-card shadow-card-hover overflow-hidden"> <div className="grid md:grid-cols-2 gap-6 p-6">
+
+
+    {/* Question */}
+    <div className="space-y-4">
+      <p className="text-base font-medium leading-relaxed">
+        {loading ? "Loading..." : question}
+      </p>
+
+      <button className="text-muted-foreground hover:text-foreground">
+        <Volume2 className="h-4 w-4" />
+      </button>
+
+      <div className="rounded-xl bg-primary/5 border p-4">
+        <p className="text-xs font-semibold text-primary mb-1">💡 Note:</p>
+        <p className="text-xs text-muted-foreground">
+          Record your answer, then click Submit.
+        </p>
+      </div>
+    </div>
+
+    {/* Video */}
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-full aspect-video rounded-xl bg-black overflow-hidden relative">
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          className="w-full h-full object-cover"
+        />
+
+        {!isRecording && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Camera className="h-10 w-10 text-white/40" />
+          </div>
         )}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 p-6">
-        {/* Question card */}
-        <div className="space-y-4">
-          <p className="text-base font-medium leading-relaxed">
-            Describe your experience with React.js, highlighting any specific
-            projects or components you've developed.
-          </p>
-          <button className="text-muted-foreground hover:text-foreground transition-colors">
-            <Volume2 className="h-4 w-4" />
-          </button>
+      <Button
+        variant="outline"
+        onClick={isRecording ? stopRecording : startRecording}
+      >
+        <Mic className="h-4 w-4 mr-2" />
+        {isRecording ? "Stop Recording" : "Start Recording"}
+      </Button>
 
-          <div className="rounded-xl bg-primary/5 border border-primary/10 p-4">
-            <p className="text-xs font-semibold text-primary mb-1">💡 Note:</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Click on Record Answer when you want to answer the question. At
-              the end of interview we will give you the feedback along with
-              correct answer for each question.
-            </p>
-          </div>
-        </div>
-
-        {/* Webcam placeholder */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-full aspect-video rounded-xl bg-foreground/5 border border-border flex items-center justify-center relative overflow-hidden">
-            <Camera className="h-10 w-10 text-muted-foreground/30" />
-            <div className="absolute top-3 right-3 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse-soft" />
-              <span className="text-[10px] text-muted-foreground font-medium">LIVE</span>
-            </div>
-          </div>
-          <Button variant="outline" className="gap-2">
-            <Mic className="h-4 w-4" />
-            Record Answer
-          </Button>
-        </div>
-      </div>
+      <Button
+        variant="default"
+        onClick={submitAnswer}
+        disabled={!recordedBlob}
+      >
+        Submit Answer
+      </Button>
     </div>
-  );
+  </div>
+</div>
+
+);
 };
 
 export default MockInterviewPreview;

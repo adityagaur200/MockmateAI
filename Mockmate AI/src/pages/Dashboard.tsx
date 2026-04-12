@@ -1,121 +1,286 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import LoadingScreen from "@/components/LoadingScreen";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Plus, Clock, CheckCircle, BarChart3,X } from "lucide-react";
-import { useState } from "react";
+import { Plus, Clock, CheckCircle, BarChart3, X, Award } from "lucide-react";
+import { useState, useEffect } from "react";
 import Resume from "@/components/Resume";
-
-const pastInterviews = [
-  { id: 1, role: "Frontend Developer", company: "TechCorp", date: "Mar 10, 2026", score: 8, status: "Completed" },
-  { id: 2, role: "Full Stack Engineer", company: "StartupXYZ", date: "Mar 8, 2026", score: 7, status: "Completed" },
-  { id: 3, role: "React Developer", company: "DesignCo", date: "Mar 5, 2026", score: 6, status: "Completed" },
-];
+import {
+  AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from "recharts";
 
 const DashboardPage = () => {
-  const[newInterview,setnewInterview]=useState(false);
+  const [newInterview, setnewInterview] = useState(false);
+  const [dashboard, setDashboard] = useState<any | null>(null);
+  const [skillRadar, setSkillRadar] = useState([
+    { skill: "Technical", value: 78 },
+    { skill: "Communication", value: 85 },
+    { skill: "Problem Solving", value: 72 },
+    { skill: "Behavioral", value: 90 },
+    { skill: "System Design", value: 65 },
+    { skill: "Domain Knowledge", value: 70 },
+  ]);
+
+  // ✅ Fetch dashboard data
+  useEffect(() => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    console.error("No token found");
+    return;
+  }
+
+  fetch("http://localhost:8000/interview/dashboard", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`, // 🔐 REQUIRED
+    },
+  })
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error("Failed to fetch dashboard");
+      }
+      return res.json();
+    })
+    .then((data) => {
+      // Calculate total time from interviews
+      let totalTime = 0;
+      if (data.recent_interviews && Array.isArray(data.recent_interviews)) {
+        data.recent_interviews.forEach((interview: any) => {
+          if (interview.created_at && interview.end_at) {
+            const start = new Date(interview.created_at);
+            const end = new Date(interview.end_at);
+            const diffMs = end.getTime() - start.getTime();
+            if (diffMs > 0) {
+              totalTime += diffMs / (1000 * 60 * 60); // convert to hours
+            }
+          }
+        });
+      }
+      data.total_time = Math.round(totalTime * 100) / 100; // round to 2 decimals
+
+      setDashboard(data);
+      if (data.skill_radar) {
+        setSkillRadar(data.skill_radar);
+      }
+    })
+    .catch((err) => console.error(err));
+}, []);
+
+  // ✅ Loading state
+  if (!dashboard) {
+    return (
+      <LoadingScreen
+        message="Loading your dashboard..."
+        detail="Preparing your progress metrics and interview insights for you."
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
       <section className="pt-28 pb-24">
         <div className="container">
+
+          {/* Header */}
           <motion.div
             className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
           >
             <div>
-              <h1 className="text-3xl font-bold tracking-tight mb-1">Dashboard</h1>
-              <p className="text-muted-foreground">Manage your mock interviews and track progress.</p>
+              <h1 className="text-3xl font-bold">Dashboard</h1>
+              <p className="text-muted-foreground">
+                Manage your mock interviews and track progress.
+              </p>
             </div>
-            <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300 gap-2" onClick={()=>setnewInterview(true)}>
+
+            <Button
+              className="bg-gradient-primary gap-2"
+              onClick={() => setnewInterview(true)}
+            >
               <Plus className="h-4 w-4" />
               New Interview
             </Button>
-          {newInterview && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
-    
-    {/* Wrapper with 15px spacing on both sides */}
-    <div className="relative">
-      
-      {/* Close Button */}
-      <button
-        onClick={() => setnewInterview(false)}
-        className="absolute -top-5 -right-7 z-10 p-2 rounded-full bg-white shadow-md hover:bg-gray-100 text-gray-700 transition-all duration-200"
-      >
-        <X className="w-4 h-4" />
-      </button>
 
-      {/* Modal Content */}
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-[50vw] max-h-[93vh]">
-        <Resume />
-      </div>
+            {/* Modal */}
+            {newInterview && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
+                <div className="relative">
+                  <button
+                    onClick={() => setnewInterview(false)}
+                    className="absolute -top-5 -right-7 p-2 rounded-full bg-white shadow-md"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
 
-    </div>
-  </div>
-)}
+                  <div className="bg-white rounded-2xl p-6 w-[50vw] max-h-[93vh]">
+                    <Resume />
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* Stats */}
           <motion.div
-            className="grid sm:grid-cols-3 gap-4 mb-10"
+            className="grid sm:grid-cols-4 gap-4 mb-10"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
           >
             {[
-              { icon: CheckCircle, label: "Interviews Completed", value: "12" },
-              { icon: BarChart3, label: "Average Score", value: "7.2/10" },
-              { icon: Clock, label: "Total Practice Time", value: "4.5 hrs" },
+              {
+                icon: CheckCircle,
+                label: "Interviews Completed",
+                value: dashboard.total_interviews,
+              },
+              {
+                icon: Award,
+                label: "Best Score",
+                value: dashboard.recent_interviews.length > 0 
+                  ? `${Math.max(...dashboard.recent_interviews.map((i: any) => i.score || 0))}/10`
+                  : "0/10",
+              },
+              {
+                icon: BarChart3,
+                label: "Average Score",
+                value: `${dashboard.avg_score}/10`,
+              },
+              {
+                icon: Clock,
+                label: "Total Practice Time",
+                value: `${dashboard.total_time} hrs`,
+              },
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-2xl border bg-card p-6 shadow-card hover:shadow-card-hover transition-all duration-300"
+                className="rounded-2xl border bg-card p-6"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <stat.icon className="h-4 w-4" />
                   </div>
-                  <span className="text-sm text-muted-foreground">{stat.label}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {stat.label}
+                  </span>
                 </div>
                 <p className="text-2xl font-bold">{stat.value}</p>
               </div>
             ))}
           </motion.div>
 
-          {/* Past Interviews */}
+          {/* Charts Row */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-10">
+            {/* Score Progress Chart */}
+            <motion.div
+              className="rounded-2xl border bg-card p-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <h3 className="font-semibold mb-4">Score Progress</h3>
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart
+                  data={dashboard.recent_interviews.map((interview: any, idx: number) => ({
+                    interview: interview.job_name || `Interview ${idx + 1}`,
+                    score: interview.score || 0,
+                  }))}
+                >
+                  <defs>
+                    <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(243, 75%, 59%)" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="hsl(243, 75%, 59%)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" />
+                  <XAxis dataKey="interview" tick={{ fontSize: 12 }} stroke="hsl(220, 9%, 46%)" />
+                  <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} stroke="hsl(220, 9%, 46%)" />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="score" stroke="hsl(243, 75%, 59%)" fill="url(#scoreGradient)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </motion.div>
+
+            {/* Skills Radar Chart */}
+            <motion.div
+              className="rounded-2xl border bg-card p-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+            >
+              <h3 className="font-semibold mb-4">Skills Breakdown</h3>
+              <ResponsiveContainer width="100%" height={240}>
+                <RadarChart data={skillRadar}>
+                  <PolarGrid stroke="hsl(220, 13%, 91%)" />
+                  <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11 }} stroke="hsl(220, 9%, 46%)" />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(220, 9%, 46%)" />
+                  <Radar dataKey="value" stroke="hsl(243, 75%, 59%)" fill="hsl(243, 75%, 59%)" fillOpacity={0.15} strokeWidth={2} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </motion.div>
+          </div>
+
+          {/* Recent Interviews */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <h2 className="text-xl font-semibold mb-4">Recent Interviews</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Recent Interviews
+            </h2>
+
             <div className="space-y-3">
-              {pastInterviews.map((interview) => (
-                <div
-                  key={interview.id}
-                  className="rounded-xl border bg-card p-5 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div>
-                    <h3 className="font-medium">{interview.role}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {interview.company} · {interview.date}
-                    </p>
+              {dashboard.recent_interviews.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No interviews yet.
+                </p>
+              ) : (
+                dashboard.recent_interviews.map((interview) => (
+                  <div
+                    key={interview.id}
+                    className="rounded-xl border bg-card p-5 flex items-center justify-between"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium">
+                          {interview.job_name || interview.role || "Interview"}
+                        </h3>
+                        {interview.status && (
+                          <span className="rounded-full bg-primary/10 text-primary px-2 py-1 text-xs font-semibold">
+                            {interview.status}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {interview.date ? new Date(interview.date).toLocaleDateString() : "No date"}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-medium text-primary">
+                        {interview.score}/10
+                      </span>
+
+                      <Link to={`/analysis/${interview.id}`}>
+                        <Button variant="outline" size="sm">
+                          View Analysis
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-primary">{interview.score}/10</span>
-                    <Link to="/performance">
-                      <Button variant="outline" size="sm">View Analysis</Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </motion.div>
+
         </div>
       </section>
+
       <Footer />
     </div>
   );
