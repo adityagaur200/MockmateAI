@@ -17,6 +17,9 @@ class QuestionAnswer(BaseModel):
     answer: Optional[Answer] = None
     created_at: datetime = Field(default_factory=datetime.now)
 
+class Skills(BaseModel):
+    skill: str
+    value: int  # 1-10
 
 class Interview(BaseModel):
     user_id: str
@@ -27,5 +30,5 @@ class Interview(BaseModel):
     current_question: Optional[str] = None
     status: str = "IN_PROGRESS"  
     created_at: datetime = Field(default_factory=datetime.now())
-    
+    skill_radar: Optional[List[Skills]]=[]
 

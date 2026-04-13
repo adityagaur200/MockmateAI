@@ -1,3 +1,5 @@
+import asyncio
+
 from google import genai
 import time
 import os
@@ -8,7 +10,8 @@ load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-async def generate_first_question(resume, jd):
+
+async def generate_first_question(resume, jd, retries=3):
     prompt = f"""
     You are an AI interviewer.
 
@@ -20,15 +23,25 @@ async def generate_first_question(resume, jd):
 
     Ask the first interview question.
     """
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
-        return response.text.strip()
-    except ServerError as e:
-        print(f"❌ Error in generate_first_question: {e}")
-        return "Sorry, I'm having trouble generating a question right now."
+
+    for attempt in range(retries):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+
+            return response.text.strip()
+
+        except ServerError as e:
+            print(f"❌ Attempt {attempt + 1} failed: {e}")
+
+            # Retry only if attempts are left
+            if attempt < retries - 1:
+                await asyncio.sleep(2 ** attempt)  # 1s → 2s → 4s
+            else:
+                print("❌ All retries failed")
+                return None
 
 
 async def generate_next_question(resume, jd, history):

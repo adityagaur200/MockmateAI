@@ -1,11 +1,13 @@
 import { Mic, Camera, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { set } from "date-fns";
 
 const MockInterviewPreview = () => {
-const interviewId = localStorage.getItem("InterviewId");
-console.log("Interview ID from localStorage:", interviewId);
+  const navigate = useNavigate();
+  const interviewId = localStorage.getItem("InterviewId");
+  console.log("Interview ID from localStorage:", interviewId);
 
 const [question, setQuestion] = useState("");
 const [loading, setLoading] = useState(true);
@@ -27,8 +29,9 @@ const res = await fetch(
   const data = await res.json();
   console.log("API Response:", data);
 
-  if(data.status === "COMPLETED") {
+  if (data.status === "COMPLETED") {
     setQuestion("Interview Completed 🎉");
+    navigate("/dashboard");
     return;
   }
 
@@ -119,10 +122,7 @@ const pollForNextQuestion = (oldQuestion) => {
 
       alert("Interview Completed 🎉");
 
-      // 👉 redirect to result page
-      window.location.href = "/analysis"; // or use navigate()
-      
-
+      navigate("/dashboard");
       return;
     }
 

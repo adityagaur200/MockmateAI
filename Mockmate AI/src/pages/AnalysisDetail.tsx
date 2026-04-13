@@ -7,17 +7,26 @@ import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { ChevronDown, ArrowLeft } from "lucide-react";
 
-const parseFeedback = (feedback) => {
-  try {
-    // remove ```json ``` wrapper
-    const clean = feedback.replace(/```json|```/g, "").trim();
+const parseFeedback = (feedback: any) => {
+  if (!feedback) return "No feedback available.";
 
-    const parsed = JSON.parse(clean);
-
-    return parsed.feedback; // only return actual feedback text
-  } catch (err) {
-    return feedback; // fallback (if already plain text)
+  // ✅ Case 1: Already object (NEW backend)
+  if (typeof feedback === "object") {
+    return feedback.feedback || "No feedback available.";
   }
+
+  // ✅ Case 2: String (OLD data)
+  if (typeof feedback === "string") {
+    try {
+      const clean = feedback.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      return parsed.feedback || clean;
+    } catch (err) {
+      return feedback;
+    }
+  }
+
+  return "Invalid feedback format";
 };
 
 const AnalysisDetail = () => {

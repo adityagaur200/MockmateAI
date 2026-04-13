@@ -16,6 +16,9 @@ async def start_interview(user_id, resume_text, job_description,job_name):
 
     first_question = await generate_first_question(resume_text, job_description)
 
+    if not first_question or not first_question.strip():
+        raise ValueError("Failed to generate the first question.")
+
     interview = {
         "job_name": job_name,
         "user_id": user_id,
@@ -40,13 +43,19 @@ async def start_interview(user_id, resume_text, job_description,job_name):
         "_id": interview_id
     }
 
-    redis_client.set(f"interview:{interview_id}", json.dumps(interview_cache), ex=3600)
+    print("Setting interview to Redis...")
+    redis_client.set(f"interview:{interview_id}", json.dumps(serialize_mongo(interview_cache)), ex=3600)
+    print("Redis set completed.")
 
-    return {
+    print("Preparing to return result...")
+    result = {
         "interview_id": interview_id,
         "job_name": job_name,
-        "first_question": first_question
+        "first_question": first_question,
+        "created_at": interview["created_at"]
     }
+    print("Returning result.")
+    return result
 
 
 async def submit_answer(interview_id, answer_text):

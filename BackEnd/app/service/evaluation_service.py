@@ -71,35 +71,37 @@ Return STRICT JSON:
 
 async def generate_final_feedback(resume, jd, history):
     prompt = f"""
-    You are an expert interviewer.
+You are an expert interviewer.
 
-    Resume:
-    {resume}
+Resume:
+{resume}
 
-    Job Description:
-    {jd}
+Job Description:
+{jd}
 
-    Interview History:
-    {history}
+Interview History:
+{history}
 
-    Feedback:
-    Based on the above, provide a Short and precise final evaluation summary of 4-5 sentences.
+### TASK:
+Evaluate the candidate and return the result in STRICT JSON format.
 
-    Final Score:
-    Based on the above, provide a final score from 1 to 10.
-
-
-### Instructions:
-1. Evaluate the candidate on the following skills:
+### REQUIREMENTS:
+1. Write a short final_feedback (4-5 sentences).
+2. Give a final_score (1 to 10).
+3. Evaluate the candidate on the following skills:
    - Technical
    - Communication
    - Problem Solving
    - Behavioral
    - System Design
    - Domain Knowledge
+4. Give each skill a score from 0 to 100.
 
-2. Give a score from 0 to 100 for each skill.
-{{ 
+### OUTPUT FORMAT (STRICT JSON ONLY — NO EXTRA TEXT):
+
+{{
+  "final_feedback": "string",
+  "final_score": number,
   "skill_radar": [
     {{ "skill": "Technical", "value": number }},
     {{ "skill": "Communication", "value": number }},
@@ -109,7 +111,7 @@ async def generate_final_feedback(resume, jd, history):
     {{ "skill": "Domain Knowledge", "value": number }}
   ]
 }}
-    """
+"""
 
     try:
         response = client.models.generate_content(

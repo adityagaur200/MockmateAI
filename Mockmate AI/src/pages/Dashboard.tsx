@@ -15,13 +15,13 @@ import {
 const DashboardPage = () => {
   const [newInterview, setnewInterview] = useState(false);
   const [dashboard, setDashboard] = useState<any | null>(null);
-  const [skillRadar, setSkillRadar] = useState([
-    { skill: "Technical", value: 78 },
-    { skill: "Communication", value: 85 },
-    { skill: "Problem Solving", value: 72 },
-    { skill: "Behavioral", value: 90 },
-    { skill: "System Design", value: 65 },
-    { skill: "Domain Knowledge", value: 70 },
+  const [skillRadar, setSkillRadar] = useState<Array<{ skill: string; value: number }>>([
+    { skill: "Technical", value: 0 },
+    { skill: "Communication", value: 0 },
+    { skill: "Problem Solving", value: 0 },
+    { skill: "Behavioral", value: 0 },
+    { skill: "System Design", value: 0 },
+    { skill: "Domain Knowledge", value: 0 },
   ]);
 
   // ✅ Fetch dashboard data
@@ -63,8 +63,15 @@ const DashboardPage = () => {
       data.total_time = Math.round(totalTime * 100) / 100; // round to 2 decimals
 
       setDashboard(data);
-      if (data.skill_radar) {
-        setSkillRadar(data.skill_radar);
+      
+      // Update skill radar with actual API data
+      if (data.skill_radar && Array.isArray(data.skill_radar) && data.skill_radar.length > 0) {
+        // Normalize skill radar data from API
+        const normalizedRadar = data.skill_radar.map((item: any) => ({
+          skill: item.skill || "Unknown",
+          value: typeof item.value === "number" ? Math.min(Math.max(item.value, 0), 100) : 0,
+        }));
+        setSkillRadar(normalizedRadar);
       }
     })
     .catch((err) => console.error(err));
@@ -213,7 +220,9 @@ const DashboardPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.25 }}
             >
-              <h3 className="font-semibold mb-4">Skills Breakdown</h3>
+              <h3 className="font-semibold mb-4">
+                Skills Breakdown {dashboard.skill_radar && dashboard.skill_radar.length > 0 ? "(Latest)" : "(No Data)"}
+              </h3>
               <ResponsiveContainer width="100%" height={240}>
                 <RadarChart data={skillRadar}>
                   <PolarGrid stroke="hsl(220, 13%, 91%)" />

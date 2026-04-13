@@ -1,7 +1,8 @@
 import asyncio
-import datetime
+from datetime import datetime
 import json
 from bson import ObjectId
+from sympy import re
 from app.agents.celery_worker import celery_app
 from app.service.transcription_service import transcribe_audio
 from app.service.evaluation_service import evaluate_answer, generate_final_feedback
@@ -11,6 +12,80 @@ from app.db.mongodb import redis_client
 from app.utils.helpers import serialize_mongo
 
 MAX_QUESTIONS = 2
+
+
+def clean_llm_response(text):
+    if not text:
+        return None
+    
+    text=re.sub(r"```json|```", "", text).strip()
+    return text
+
+def parse_json_response(text):
+    if not text or not isinstance(text, str):
+        return None
+
+    try:
+        cleaned_text = clean_llm_response(text)
+        parsed = json.loads(cleaned_text)
+
+        if isinstance(parsed, str):
+            parsed = json.loads(parsed)
+        return parsed
+    except Exception:
+        return None
+
+
+def normalize_skill_radar_list(skill_radar):
+    if not isinstance(skill_radar, list):
+        return []
+
+    normalized = []
+    for item in skill_radar:
+        if not isinstance(item, dict):
+            continue
+
+        skill = item.get("skill")
+        value = item.get("value")
+        if skill is None or value is None:
+            continue
+
+        try:
+            numeric_value = float(value)
+        except (ValueError, TypeError):
+            continue
+
+        normalized.append({"skill": skill, "value": numeric_value})
+
+    return normalized
+
+
+def average_skill_radar(current_radar, previous_radar):
+    current = normalize_skill_radar_list(current_radar)
+    previous = normalize_skill_radar_list(previous_radar)
+
+    if not previous:
+        return current
+
+    prev_map = {item["skill"]: item["value"] for item in previous}
+    current_map = {item["skill"]: item["value"] for item in current}
+    all_skills = set(prev_map) | set(current_map)
+
+    averaged = []
+    for skill in sorted(all_skills):
+        current_value = current_map.get(skill)
+        previous_value = prev_map.get(skill)
+
+        if current_value is not None and previous_value is not None:
+            value = round((current_value + previous_value) / 2, 2)
+        elif current_value is not None:
+            value = round(current_value, 2)
+        else:
+            value = round(previous_value, 2)
+
+        averaged.append({"skill": skill, "value": value})
+
+    return averaged
 
 
 @celery_app.task
@@ -61,6 +136,7 @@ def process_audio_answer(interview_id, file_path):
 
     interview["history"].append(history_entry)
 
+
     # 🔹 Step 4: Decide next step
     if len(interview["history"]) >= MAX_QUESTIONS:
 
@@ -71,6 +147,38 @@ def process_audio_answer(interview_id, file_path):
                 interview["history"]
             )
         )
+
+        parsed_feedback = parse_json_response(final_feedback)
+
+        if parsed_feedback:
+            interview["final_feedback"] = parsed_feedback.get("final_feedback")
+            interview["final_score"] = parsed_feedback.get("final_score")
+            skill_radar_current = parsed_feedback.get("skill_radar")
+        else:
+            interview["final_feedback"] = final_feedback
+            interview["final_score"] = None
+            skill_radar_current = None
+        skill_radar_current = parsed_feedback.get("skill_radar") if parsed_feedback and isinstance(parsed_feedback.get("skill_radar"), list) else None
+
+        previous_interview = interview_collection_sync.find_one(
+            {
+                "user_id": interview["user_id"],
+                "_id": {"$ne": ObjectId(interview_id)},
+                "skill_radar": {"$exists": True, "$ne": []}
+            },
+            sort=[("created_at", -1)]
+        )
+
+        if skill_radar_current is not None:
+            averaged_skill_radar = average_skill_radar(
+                skill_radar_current,
+                previous_interview.get("skill_radar") if previous_interview else []
+            )
+        else:
+            averaged_skill_radar = previous_interview.get("skill_radar") if previous_interview else []
+
+        interview["skill_radar"] = averaged_skill_radar
+        interview["final_feedback"] = parsed_feedback.get("final_feedback") if parsed_feedback else final_feedback
 
         next_question = None
         status = "COMPLETED"
@@ -95,9 +203,10 @@ def process_audio_answer(interview_id, file_path):
                 "current_question": next_question,
                 "history": interview["history"],
                 "status": status,
-                "ended_at": end_at if status == "COMPLETED" else None,
-                "final_feedback": final_feedback if status == "COMPLETED" else None,
-                "final_score": sum([h["score"] for h in interview["history"]]) / len(interview["history"]) if interview["history"] else None
+                "ended_at": datetime.utcnow() if status == "COMPLETED" else None,
+                "final_feedback": interview.get("final_feedback") if status == "COMPLETED" else None,
+                "final_score": interview.get("final_score") if status == "COMPLETED" else None,
+                "skill_radar": interview.get("skill_radar") if status == "COMPLETED" else interview.get("skill_radar")
             }
         }
     )
@@ -117,6 +226,7 @@ def process_audio_answer(interview_id, file_path):
         "score": score,
         "next_question": next_question,
         "status": status,
-        "final_feedback": final_feedback if status == "COMPLETED" else None,
-        "final_score": sum([h["score"] for h in interview["history"]]) / len(interview["history"]) if interview["history"] else None
+        "final_feedback": interview.get("final_feedback") if status == "COMPLETED" else None,
+        "final_score": interview.get("final_score") if status == "COMPLETED" else None,
+        "skill_radar": interview.get("skill_radar") if status == "COMPLETED" else None
     }

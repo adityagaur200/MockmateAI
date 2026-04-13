@@ -120,11 +120,19 @@ async def get_dashboard(user=Depends(get_current_user)):
 
     avg_score = round(total_score / total_questions, 1) if total_questions else 0
 
+    # Get most recent completed interview with skill_radar
+    most_recent_with_radar = None
+    for interview in reversed(interviews):
+        if interview.get("skill_radar"):
+            most_recent_with_radar = interview.get("skill_radar")
+            break
+
     return {
         "total_interviews": total_interviews,
         "avg_score": avg_score,
         "total_time": round(total_time / 3600, 1),
-        "recent_interviews": recent_interviews[-5:][::-1]
+        "recent_interviews": recent_interviews[-5:][::-1],
+        "skill_radar": most_recent_with_radar if most_recent_with_radar else []
     }
 
 

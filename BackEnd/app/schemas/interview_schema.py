@@ -4,7 +4,7 @@ from bson import ObjectId
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
-from app.models.interview_model import QuestionAnswer
+from app.models.interview_model import QuestionAnswer, Skills
 from app.utils.ObjectId_Vallidator import PyObjectId
 
 
@@ -57,6 +57,7 @@ class InterviewResponse(BaseModel):
     final_score: Optional[float] = None
     final_feedback: Optional[str] = None
     ended_at: Optional[datetime] = None
+    skill_radar: Optional[List[Skills]] = []
 
     class Config:
         allow_population_by_field_name = True

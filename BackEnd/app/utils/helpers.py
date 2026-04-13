@@ -1,22 +1,23 @@
 from bson import ObjectId
 from fastapi import HTTPException
+from datetime import datetime
 
 
 def serialize_mongo(data):
-    """Recursively convert MongoDB ObjectId and bytes to JSON-safe values."""
+    """Recursively convert MongoDB ObjectId, datetime, and bytes to JSON-safe values."""
     if data is None:
         return None
 
     if isinstance(data, ObjectId):
         return str(data)
 
+    if isinstance(data, datetime):
+        return data.isoformat()
+
     if isinstance(data, dict):
         out = {}
         for key, value in data.items():
-            if isinstance(value, ObjectId):
-                out[key] = str(value)
-            else:
-                out[key] = serialize_mongo(value)
+            out[key] = serialize_mongo(value)
         return out
 
     if isinstance(data, list):

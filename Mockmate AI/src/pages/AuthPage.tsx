@@ -50,7 +50,7 @@ export default function AuthPage() {
       } else {
         // 🆕 REGISTER
         if (form.password !== form.confirmPassword) {
-          alert("Passwords do not match ❌");
+          //alert("Passwords do not match ❌");
           setLoading(false);
           return;
         }
@@ -83,7 +83,7 @@ export default function AuthPage() {
 
         window.location.href = "/";
       } else {
-        alert("Account created successfully 🎉");
+        //alert("Account created successfully 🎉");
         setIsLogin(true);
       }
 
