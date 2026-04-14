@@ -79,7 +79,7 @@ export default function AuthPage() {
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("userId", data.user_id);
 
-        alert("Login successful 🚀");
+        //alert("Login successful 🚀");
 
         window.location.href = "/";
       } else {

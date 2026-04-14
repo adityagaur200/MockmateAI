@@ -10,7 +10,7 @@ from app.utils.helpers import serialize_mongo
 
 
 
-MAX_QUESTIONS = 2
+MAX_QUESTIONS = 3
 
 async def start_interview(user_id, resume_text, job_description,job_name):
 
