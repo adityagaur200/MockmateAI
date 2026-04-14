@@ -29,6 +29,25 @@ const parseFeedback = (feedback: any) => {
   return "Invalid feedback format";
 };
 
+const parseFeedbackScore = (feedback: any) => {
+  if (!feedback) return 0;
+  if (typeof feedback === "object") {
+    return feedback.score ?? 0;
+  }
+
+  if (typeof feedback === "string") {
+    try {
+      const clean = feedback.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      return parsed.score ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  return 0;
+};
+
 const AnalysisDetail = () => {
   const { interviewId } = useParams();
   const [interview, setInterview] = useState<any>(null);
@@ -200,60 +219,64 @@ const AnalysisDetail = () => {
 
             <div className="space-y-4">
               {interview.history && interview.history.length > 0 ? (
-                interview.history.map((item: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="rounded-xl border bg-card overflow-hidden transition-all duration-300 hover:shadow-lg"
-                  >
-                    <button
-                      onClick={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
-                      className="w-full flex items-center justify-between p-5 text-left"
+                interview.history.map((item: any, idx: number) => {
+                  const score = parseFeedbackScore(item.feedback);
+
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-xl border bg-card overflow-hidden transition-all duration-300 hover:shadow-lg"
                     >
-                      <div className="flex-1 pr-4">
-                        <p className="text-sm font-medium leading-relaxed mb-2">
-                          Q{idx + 1}: {item.question}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-sm font-semibold text-primary">
-                          {parseFeedback(item.score) || 0}/10
-                        </span>
-                        <ChevronDown
-                          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                            expandedIndex === idx ? "rotate-180" : ""
-                          }`}
-                        />
-                      </div>
-                    </button>
-
-                    {expandedIndex === idx && (
-                      <motion.div
-                        className="px-5 pb-5 space-y-4 border-t pt-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.2 }}
+                      <button
+                        onClick={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
+                        className="w-full flex items-center justify-between p-5 text-left"
                       >
-                        <div>
-                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                            Your Answer
-                          </span>
-                          <p className="text-sm text-foreground/80 mt-2 leading-relaxed">
-                            {item.answer}
+                        <div className="flex-1 pr-4">
+                          <p className="text-sm font-medium leading-relaxed mb-2">
+                            Q{idx + 1}: {item.question}
                           </p>
                         </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-sm font-semibold text-primary">
+                            {score}/10
+                          </span>
+                          <ChevronDown
+                            className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                              expandedIndex === idx ? "rotate-180" : ""
+                            }`}
+                          />
+                        </div>
+                      </button>
 
-                        <div className="rounded-lg bg-primary/5 border border-primary/10 p-4">
-                          <span className="text-xs font-semibold text-primary uppercase tracking-wide">
-                            💡 Feedback
-                          </span>
-                          <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                            {parseFeedback(item.feedback)}
-                          </p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </div>
-                ))
+                      {expandedIndex === idx && (
+                        <motion.div
+                          className="px-5 pb-5 space-y-4 border-t pt-4"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <div>
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                              Your Answer
+                            </span>
+                            <p className="text-sm text-foreground/80 mt-2 leading-relaxed">
+                              {item.answer}
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg bg-primary/5 border border-primary/10 p-4">
+                            <span className="text-xs font-semibold text-primary uppercase tracking-wide">
+                              💡 Feedback
+                            </span>
+                            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                              {parseFeedback(item.feedback)}
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
                 <p className="text-muted-foreground">No questions recorded for this interview.</p>
               )}
