@@ -1,0 +1,21 @@
+We are looking for a Developer Intern who is eager to learn and start their career in software development. This role is perfect for students or freshers who have basic programming knowledge and want real-world experience.
+
+🛠️ Responsibilities
+Assist in developing and maintaining web applications
+Write clean and simple code with guidance from senior developers
+Fix basic bugs and improve application performance
+Participate in team meetings and discussions
+Learn and apply new technologies as required
+Help in testing and debugging applications
+📚 Basic Requirements (Easy Skills)
+Basic knowledge of any programming language (Java / Python / JavaScript)
+Understanding of simple concepts like variables, loops, and functions
+Familiarity with HTML, CSS, and basic web development
+Willingness to learn and improve
+Good problem-solving attitude
+Ability to work in a team
+➕ Good to Have (Not Mandatory)
+Basic knowledge of React.js or any frontend framework
+Understanding of backend basics (Node.js / Spring Boot)
+Familiarity with Git and GitHub
+Any small project or college project

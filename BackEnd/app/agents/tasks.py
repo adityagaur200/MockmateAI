@@ -11,7 +11,7 @@ from app.db.mongo_sync import interview_collection_sync
 from app.db.mongodb import redis_client
 from app.utils.helpers import serialize_mongo
 
-MAX_QUESTIONS = 3
+MAX_QUESTIONS = 2
 
 
 def clean_llm_response(text):

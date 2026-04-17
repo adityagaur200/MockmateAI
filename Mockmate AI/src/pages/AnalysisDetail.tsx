@@ -10,12 +10,10 @@ import { ChevronDown, ArrowLeft } from "lucide-react";
 const parseFeedback = (feedback: any) => {
   if (!feedback) return "No feedback available.";
 
-  // ✅ Case 1: Already object (NEW backend)
   if (typeof feedback === "object") {
     return feedback.feedback || "No feedback available.";
   }
 
-  // ✅ Case 2: String (OLD data)
   if (typeof feedback === "string") {
     try {
       const clean = feedback.replace(/```json|```/g, "").trim();
@@ -46,6 +44,30 @@ const parseFeedbackScore = (feedback: any) => {
   }
 
   return 0;
+};
+
+const formatTimeSpent = (start?: string, end?: string) => {
+  if (!start || !end) return "N/A";
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.valueOf()) || Number.isNaN(endDate.valueOf())) {
+    return "N/A";
+  }
+
+  const ms = endDate.getTime() - startDate.getTime();
+  if (ms < 0) return "N/A";
+
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const segments = [];
+  if (hours) segments.push(`${hours}h`);
+  if (minutes) segments.push(`${minutes}m`);
+  if (seconds || segments.length === 0) segments.push(`${seconds}s`);
+
+  return segments.join(" ");
 };
 
 const AnalysisDetail = () => {
@@ -177,6 +199,12 @@ const AnalysisDetail = () => {
                   <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground mb-2">Date</p>
                   <p className="font-medium text-foreground">
                     {interview.created_at ? new Date(interview.created_at).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-muted p-4">
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground mb-2">Time Spent</p>
+                  <p className="font-medium text-foreground">
+                    {formatTimeSpent(interview.created_at, interview.ended_at)}
                   </p>
                 </div>
               </div>

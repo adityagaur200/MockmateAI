@@ -15,7 +15,6 @@ export default function AuthPage() {
     confirmPassword: "",
   });
 
-  // ✅ Auto redirect if already logged in
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -27,7 +26,6 @@ export default function AuthPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // 🚀 MAIN SUBMIT FUNCTION
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -36,7 +34,6 @@ export default function AuthPage() {
       let response;
 
       if (isLogin) {
-        // 🔐 LOGIN
         response = await fetch("http://localhost:8000/auth/login", {
           method: "POST",
           headers: {
@@ -48,9 +45,7 @@ export default function AuthPage() {
           }),
         });
       } else {
-        // 🆕 REGISTER
         if (form.password !== form.confirmPassword) {
-          //alert("Passwords do not match ❌");
           setLoading(false);
           return;
         }
@@ -75,15 +70,12 @@ export default function AuthPage() {
       }
 
       if (isLogin) {
-        // ✅ STORE TOKEN
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("userId", data.user_id);
 
-        //alert("Login successful 🚀");
 
         window.location.href = "/";
       } else {
-        //alert("Account created successfully 🎉");
         setIsLogin(true);
       }
 

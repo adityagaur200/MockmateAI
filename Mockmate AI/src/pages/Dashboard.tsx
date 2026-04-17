@@ -24,7 +24,6 @@ const DashboardPage = () => {
     { skill: "Domain Knowledge", value: 0 },
   ]);
 
-  // ✅ Fetch dashboard data
   useEffect(() => {
   const token = localStorage.getItem("token");
 
@@ -36,7 +35,7 @@ const DashboardPage = () => {
   fetch("http://localhost:8000/interview/dashboard", {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${token}`, // 🔐 REQUIRED
+      Authorization: `Bearer ${token}`, 
     },
   })
     .then((res) => {
@@ -77,7 +76,6 @@ const DashboardPage = () => {
     .catch((err) => console.error(err));
 }, []);
 
-  // ✅ Loading state
   if (!dashboard) {
     return (
       <LoadingScreen
