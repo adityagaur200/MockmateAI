@@ -45,21 +45,15 @@ const DashboardPage = () => {
       return res.json();
     })
     .then((data) => {
-      // Calculate total time from interviews
-      let totalTime = 0;
-      if (data.recent_interviews && Array.isArray(data.recent_interviews)) {
-        data.recent_interviews.forEach((interview: any) => {
-          if (interview.created_at && interview.end_at) {
-            const start = new Date(interview.created_at);
-            const end = new Date(interview.end_at);
-            const diffMs = end.getTime() - start.getTime();
-            if (diffMs > 0) {
-              totalTime += diffMs / (1000 * 60 * 60); // convert to hours
-            }
-          }
-        });
-      }
-      data.total_time = Math.round(totalTime * 100) / 100; // round to 2 decimals
+      console.log("Dashboard data:", data);
+      console.log({
+        avg_score: data.avg_score,
+        recent_interviews: data.recent_interviews,
+        skill_radar: data.skill_radar,
+        total_interviews: data.total_interviews,
+        total_time: data.total_time,
+      });
+      console.log("Total Interviews Count:", data.total_interviews, "Type:", typeof data.total_interviews);
 
       setDashboard(data);
       
@@ -142,7 +136,7 @@ const DashboardPage = () => {
               {
                 icon: CheckCircle,
                 label: "Interviews Completed",
-                value: dashboard.total_interviews,
+                value: dashboard.recent_interviews?.length || 0,
               },
               {
                 icon: Award,
@@ -221,14 +215,29 @@ const DashboardPage = () => {
               <h3 className="font-semibold mb-4">
                 Skills Breakdown {dashboard.skill_radar && dashboard.skill_radar.length > 0 ? "(Latest)" : "(No Data)"}
               </h3>
-              <ResponsiveContainer width="100%" height={240}>
-                <RadarChart data={skillRadar}>
-                  <PolarGrid stroke="hsl(220, 13%, 91%)" />
-                  <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11 }} stroke="hsl(220, 9%, 46%)" />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(220, 9%, 46%)" />
-                  <Radar dataKey="value" stroke="hsl(243, 75%, 59%)" fill="hsl(243, 75%, 59%)" fillOpacity={0.15} strokeWidth={2} />
-                </RadarChart>
-              </ResponsiveContainer>
+              {skillRadar && skillRadar.length > 0 && skillRadar.some(s => s.value > 0) ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <RadarChart data={skillRadar} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <PolarGrid stroke="hsl(220, 13%, 91%)" />
+                    <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11 }} stroke="hsl(220, 9%, 46%)" />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(220, 9%, 46%)" />
+                    <Radar 
+                      name="Skills" 
+                      dataKey="value" 
+                      stroke="hsl(243, 75%, 59%)" 
+                      fill="hsl(243, 75%, 59%)" 
+                      fillOpacity={0.25} 
+                      strokeWidth={2} 
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-80 bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground text-center">
+                    Complete interviews to see your skills breakdown
+                  </p>
+                </div>
+              )}
             </motion.div>
           </div>
 
@@ -264,9 +273,9 @@ const DashboardPage = () => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {interview.date ? new Date(interview.date).toLocaleDateString() : "No date"}
+                      {interview.date ? new Date(interview.date).toLocaleDateString() : "No date"}
                       </p>
-                    </div>
+                  </div>
 
                     <div className="flex items-center gap-4">
                       <span className="text-sm font-medium text-primary">

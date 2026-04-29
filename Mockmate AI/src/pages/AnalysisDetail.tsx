@@ -10,16 +10,28 @@ import { ChevronDown, ArrowLeft } from "lucide-react";
 const parseFeedback = (feedback: any) => {
   if (!feedback) return "No feedback available.";
 
+  // If it's already an object
   if (typeof feedback === "object") {
-    return feedback.feedback || "No feedback available.";
+    // Check for feedback property (individual question feedback)
+    if (feedback.feedback) return feedback.feedback;
+    // Check for final_feedback property (full response)
+    if (feedback.final_feedback) return feedback.final_feedback;
+    return "No feedback available.";
   }
 
+  // If it's a string, try to parse as JSON
   if (typeof feedback === "string") {
     try {
       const clean = feedback.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
-      return parsed.feedback || clean;
+      
+      if (typeof parsed === "object") {
+        // Check for both feedback and final_feedback properties
+        return parsed.feedback || parsed.final_feedback || clean;
+      }
+      return clean;
     } catch (err) {
+      // If parsing fails, return the original string
       return feedback;
     }
   }
@@ -29,15 +41,18 @@ const parseFeedback = (feedback: any) => {
 
 const parseFeedbackScore = (feedback: any) => {
   if (!feedback) return 0;
+
   if (typeof feedback === "object") {
-    return feedback.score ?? 0;
+    // Check for score property (individual question) or final_score (full response)
+    return feedback.score ?? feedback.final_score ?? 0;
   }
 
   if (typeof feedback === "string") {
     try {
       const clean = feedback.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
-      return parsed.score ?? 0;
+      // Check for both score and final_score properties
+      return parsed.score ?? parsed.final_score ?? 0;
     } catch {
       return 0;
     }
@@ -236,12 +251,47 @@ const AnalysisDetail = () => {
               </div>
             </div>
           </motion.div>
-
+            {/* Areas to Improve */}
+          {interview.areas_to_improve && interview.areas_to_improve.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mb-10"
+            >
+              <h2 className="text-xl font-semibold mb-4">Areas to Improve</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {interview.areas_to_improve.map((area: string, idx: number) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.1 }}
+                    className="rounded-xl border bg-card p-5 hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-amber-100 text-amber-700">
+                          <span className="text-lg font-semibold">{idx + 1}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {area}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
           {/* Questions and Answers */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            className="mb-10"
           >
             <h2 className="text-xl font-semibold mb-4">Questions & Answers</h2>
 

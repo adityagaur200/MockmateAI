@@ -4,26 +4,45 @@ import json
 from bson import ObjectId
 from app.db.mongodb import interview_collection
 from app.db.mongodb import redis_client
-from app.service.ai_service import generate_first_question, generate_next_question
-from app.service.evaluation_service import evaluate_answer
+from app.service.ai_service import generate_first_question
+from app.agents.planner import plan_interview
 from app.utils.helpers import serialize_mongo
 
+async def start_interview(user_id, resume_text, job_description, job_name):
+    """
+    Start a new interview session.
+    1. Call planner to create interview plan
+    2. Generate first question using the plan
+    3. Save interview with plan and coverage to MongoDB
+    """
 
+    # 1. Plan the interview (sync call - Gemini API)
+    print("Planning interview...")
+    plan = plan_interview(resume_text, job_description)
+    print(f"Plan created for: {plan.get('candidate_name')}")
 
-MAX_QUESTIONS = 2
-
-async def start_interview(user_id, resume_text, job_description,job_name):
-
-    first_question = await generate_first_question(resume_text, job_description)
+    # 2. Generate first question using the plan
+    first_question = await generate_first_question(resume_text, job_description, plan)
 
     if not first_question or not first_question.strip():
         raise ValueError("Failed to generate the first question.")
 
+    # 3. Initialize coverage state
+    coverage = {
+        "covered_ids": [],
+        "weak_ids": [],
+        "follow_up_counts": {},
+        "turn_count": 0
+    }
+
+    # 4. Create interview document
     interview = {
         "job_name": job_name,
         "user_id": user_id,
         "resume_text": resume_text,
         "job_description": job_description,
+        "plan": plan,
+        "coverage": coverage,
         "history": [],
         "current_question": first_question,
         "status": "IN_PROGRESS",
@@ -38,6 +57,7 @@ async def start_interview(user_id, resume_text, job_description,job_name):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    # 5. Cache to Redis
     interview_cache = {
         **interview,
         "_id": interview_id
@@ -58,140 +78,8 @@ async def start_interview(user_id, resume_text, job_description,job_name):
     return result
 
 
-async def submit_answer(interview_id, answer_text):
-
-    # 🔹 Fetch from Redis first
-    cached = redis_client.get(f"interview:{interview_id}")
-
-    if cached:
-        interview = json.loads(cached)
-    else:
-        interview = await interview_collection.find_one({"_id": ObjectId(interview_id)})
-        interview = serialize_mongo(interview)
-
-    # 🔹 Early exit if already completed (idempotent)
-    if interview.get("status") == "COMPLETED":
-        history = interview.get("history", [])
-        total_questions = len(history)
-        final_score = sum(h["score"] for h in history) / total_questions if total_questions else 0
-
-        return {
-            "status": "COMPLETED",
-            "message": "Interview Completed 🎉",
-            "final_score": final_score,
-            "total_questions": total_questions
-        }
-
-    # 🔹 Validate current question
-    current_question = interview.get("current_question")
-    if not current_question:
-        return {
-            "status": "ERROR",
-            "message": "No active question found. Interview might be completed."
-        }
-
-    history = interview.get("history", [])
-
-    # 🔹 Evaluate answer (make async if needed)
-    evaluation = evaluate_answer(current_question, answer_text)
-    score = evaluation["score"]
-
-    # 🔹 Append history
-    history_entry = {
-        "question": current_question,
-        "answer": answer_text,
-        "score": score,
-        "feedback": evaluation["feedback"]
-    }
-
-    history.append(history_entry)
-    total_questions = len(history)
-
-    # 🔹 Interview completion check
-    if total_questions >= MAX_QUESTIONS:
-
-        final_score = sum(h["score"] for h in history) / total_questions if total_questions else 0
-
-        await interview_collection.update_one(
-            {"_id": ObjectId(interview_id)},
-            {
-                "$set": {
-                    "history": history,
-                    "status": "COMPLETED",
-                    "current_question": None
-                }
-            }
-        )
-
-        interview["history"] = history
-        interview["status"] = "COMPLETED"
-        interview["current_question"] = None
-
-        redis_client.set(
-            f"interview:{interview_id}",
-            json.dumps(interview),
-            ex=3600
-        )
-
-        return {
-            "status": "COMPLETED",
-            "message": "Interview Completed 🎉",
-            "final_score": final_score,
-            "total_questions": total_questions
-        }
-
-    # 🔹 Generate next question (adaptive logic)
-    if score < 5:
-        next_question = await generate_next_question(
-            interview["resume_text"],
-            interview["job_description"],
-            history + [{"type": "instruction", "content": "Ask a follow-up question on the same topic"}]
-        )
-
-    elif score >= 8:
-        next_question = await generate_next_question(
-            interview["resume_text"],
-            interview["job_description"],
-            history + [{"type": "instruction", "content": "Move to a new topic or increase difficulty"}]
-        )
-
-    else:
-        next_question = await generate_next_question(
-            interview["resume_text"],
-            interview["job_description"],
-            history
-        )
-
-    # 🔹 Update DB
-    await interview_collection.update_one(
-        {"_id": ObjectId(interview_id)},
-        {
-            "$set": {
-                "history": history,
-                "current_question": next_question
-            }
-        }
-    )
-
-    # 🔹 Update Redis (IMPORTANT: include history)
-    interview["history"] = history
-    interview["current_question"] = next_question
-
-    redis_client.set(
-        f"interview:{interview_id}",
-        json.dumps(serialize_mongo(interview)),
-        ex=3600
-    )
-
-    # 🔹 Final response
-    return {
-        "next_question": next_question,
-        "score": score,
-        "feedback": evaluation["feedback"],
-        "progress": f"{total_questions}/{MAX_QUESTIONS}"
-    }
-
 async def get_current_question(interview_id):
+    """Get the current question for an interview from cache or database."""
 
     # 🔹 Try Redis first (FAST)
     cached = redis_client.get(f"interview:{interview_id}")
@@ -214,7 +102,7 @@ async def get_current_question(interview_id):
             ex=3600
         )
 
-    #Stop if completed
+    # Stop if completed
     if interview["status"] == "COMPLETED":
         return {
             "status": "COMPLETED",
@@ -227,5 +115,5 @@ async def get_current_question(interview_id):
     return {
         "current_question": interview.get("current_question"),
         "status": interview.get("status"),
-        "progress": f"{len(interview.get('history', []))}/10"
+        "progress": f"{len(interview.get('history', []))}/{interview.get('plan', {}).get('suggested_turns', 6)}"
     }

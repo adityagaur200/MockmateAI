@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from app.auth.utils import get_current_user
 from app.agents.tasks import process_audio_answer
 from app.schemas.interview_schema import StartInterviewResponse
-from app.service.interview_service import get_current_question, start_interview, submit_answer
+from app.service.interview_service import get_current_question, start_interview
 from app.utils.file_parser import extract_text_from_pdf
 from app.utils.helpers import validate_file_type, validate_file_size
 from app.utils.constants import ALLOWED_RESUME_TYPES as allowed_types 
@@ -99,7 +99,19 @@ async def get_dashboard(user=Depends(get_current_user)):
 
         total_score += sum(q.get("score", 0) for q in history)
         total_questions += len(history)
-        total_time += interview.get("duration", 0)
+        
+        # Calculate duration from created_at and ended_at
+        duration_seconds = 0
+        created_at = interview.get("created_at")
+        ended_at = interview.get("ended_at")
+        if created_at and ended_at:
+            duration_seconds = (ended_at - created_at).total_seconds()
+        
+        # If no ended_at, use duration field as fallback
+        if duration_seconds == 0:
+            duration_seconds = interview.get("duration", 0)
+        
+        total_time += duration_seconds
 
         final_score = interview.get("final_score")
         if final_score is None:
@@ -120,19 +132,32 @@ async def get_dashboard(user=Depends(get_current_user)):
 
     avg_score = round(total_score / total_questions, 1) if total_questions else 0
 
-    # Get most recent completed interview with skill_radar
-    most_recent_with_radar = None
-    for interview in reversed(interviews):
+    # Calculate average skill radar from all interviews
+    skill_map = {}
+    for interview in interviews:
         if interview.get("skill_radar"):
-            most_recent_with_radar = interview.get("skill_radar")
-            break
+            for skill_item in interview.get("skill_radar", []):
+                skill_name = skill_item.get("skill", "Unknown")
+                skill_value = skill_item.get("value", 0)
+                
+                if skill_name not in skill_map:
+                    skill_map[skill_name] = {"sum": 0, "count": 0}
+                
+                skill_map[skill_name]["sum"] += skill_value
+                skill_map[skill_name]["count"] += 1
+    
+    # Calculate averages
+    averaged_skill_radar = []
+    for skill, values in skill_map.items():
+        avg_value = round(values["sum"] / values["count"], 1) if values["count"] > 0 else 0
+        averaged_skill_radar.append({"skill": skill, "value": avg_value})
 
     return {
         "total_interviews": total_interviews,
         "avg_score": avg_score,
         "total_time": round(total_time / 3600, 1),
         "recent_interviews": recent_interviews[-5:][::-1],
-        "skill_radar": most_recent_with_radar if most_recent_with_radar else []
+        "skill_radar": averaged_skill_radar
     }
 
 
@@ -170,12 +195,3 @@ async def get_interview_details(interview_id: str, user=Depends(get_current_user
 @router.get("/")
 async def test():
     return {"message": "Interview API working 🚀"}
-
-
-@router.post("/update-api-key")
-def update_api_key():
-    new_key = os.getenv("GEMINI_API_KEY")
-    if not new_key:
-        raise HTTPException(status_code=400, detail="New API key not found in environment variables.")
-    else:
-        return {"message": "API key updated successfully{}".format(new_key)}

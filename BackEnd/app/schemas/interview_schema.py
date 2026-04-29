@@ -58,6 +58,11 @@ class InterviewResponse(BaseModel):
     final_feedback: Optional[str] = None
     ended_at: Optional[datetime] = None
     skill_radar: Optional[List[Skills]] = []
+    hiring_recommendation: Optional[str] = None
+    strengths: Optional[List[str]] = []
+    areas_to_improve: Optional[List[str]] = []
+    plan: Optional[dict] = None
+    coverage: Optional[dict] = None
 
     class Config:
         allow_population_by_field_name = True
