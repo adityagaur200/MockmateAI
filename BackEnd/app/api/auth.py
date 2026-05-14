@@ -33,7 +33,12 @@ async def register(user: UserRegister):
 
     created_user = await user_collection.find_one({"_id": result.inserted_id})
 
-    return created_user
+    return {
+        "id": str(created_user["_id"]),
+        "name": created_user["name"],
+        "email": created_user["email"],
+        "created_at": created_user["created_at"]
+    }
 
 
 # ✅ LOGIN
